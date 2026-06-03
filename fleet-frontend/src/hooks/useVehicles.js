@@ -6,12 +6,13 @@ import {
   deleteVehicle,
 } from "../api/services";
 
-export function useVehicles() {
+export function useVehicles(enabled = false) {
   const [vehicles, setVehicles] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
 
   const fetchVehicles = useCallback(async (isInitial = false) => {
+    if (!enabled) return;
     if (isInitial) setLoading(true);
     setError(null);
     try {
@@ -22,14 +23,21 @@ export function useVehicles() {
     } finally {
       if (isInitial) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setVehicles([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     fetchVehicles(true);
     // Poll every 10 seconds for live updates
     const interval = setInterval(() => fetchVehicles(false), 10000);
     return () => clearInterval(interval);
-  }, [fetchVehicles]);
+  }, [fetchVehicles, enabled]);
 
   const createVehicle = async (data) => {
     const res = await addVehicle(data);

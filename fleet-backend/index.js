@@ -14,9 +14,19 @@ connectDB();
 
 const app = express();
 
-// Enable CORS for the frontend running on localhost:3001
+// Enable CORS for the frontend during local development
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'http://localhost:30001 ',
+];
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy: origin not allowed'));
+    }
+  },
   credentials: true,
 }));
 

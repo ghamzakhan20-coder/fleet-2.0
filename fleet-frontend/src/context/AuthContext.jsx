@@ -1,28 +1,19 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { loginUser, getMe } from "../api/services";
+import { loginUser } from "../api/services";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
-  const [token, setToken]     = useState(localStorage.getItem("fleet_token"));
+  const [token, setToken]     = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // On app load: if token exists, fetch user profile
+  // Always require login on app start by clearing stored auth
   useEffect(() => {
-    const init = async () => {
-      if (token) {
-        try {
-          const res = await getMe();
-          setUser(res.data.data);
-        } catch {
-          logout();
-        }
-      }
-      setLoading(false);
-    };
-    init();
-  }, [token]);
+    localStorage.removeItem("fleet_token");
+    localStorage.removeItem("fleet_user");
+    setLoading(false);
+  }, []);
 
   // Listen for logout events from API interceptor
   useEffect(() => {

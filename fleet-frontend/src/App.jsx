@@ -395,7 +395,7 @@ function InnerApp() {
   const { user, loading: authLoading, logout } = useAuth();
   const [activePage, setActivePage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
-  const { vehicles, loading: vehiclesLoading, error, createVehicle, removeVehicle } = useVehicles();
+  const { vehicles, loading: vehiclesLoading, error, createVehicle, removeVehicle } = useVehicles(!!user);
 
   if (authLoading) return <Loader />;
   if (!user) return <LoginPage onLogin={() => {}} />;
