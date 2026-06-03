@@ -25,9 +25,13 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("auth:logout", handleLogout);
   }, []);
 
-  const login = async (email, password) => {
-    const res = await loginUser({ email, password });
+  const login = async (email, password, selectedRole) => {
+    const res = await loginUser({ email, password, role: selectedRole });
     const { token: newToken, user: newUser } = res.data;
+
+    if (selectedRole && newUser.role !== selectedRole) {
+      throw new Error(`Selected role does not match account role (${newUser.role}).`);
+    }
 
     localStorage.setItem("fleet_token", newToken);
     localStorage.setItem("fleet_user", JSON.stringify(newUser));

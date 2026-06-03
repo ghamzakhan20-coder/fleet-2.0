@@ -7,6 +7,7 @@ const errorHandler = require('./middleware/errorMiddleware');
 // Route imports
 const authRoutes = require('./routes/authRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const logRoutes = require('./routes/logRoutes');
 
 // Connect to MongoDB
@@ -36,6 +37,7 @@ app.use(express.json());
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/logs', logRoutes);
 
 // ESP32 data endpoint (also mounted at root level for convenience)

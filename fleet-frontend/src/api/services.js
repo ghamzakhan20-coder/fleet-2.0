@@ -43,3 +43,8 @@ export const getTrips = (vehicleId) =>
 
 export const sendSimulatedData = (data) =>
   api.post("/vehicle-data", data);
+
+// ─── ADMIN ───────────────────────────────────────────────────────────────────
+
+export const getUsersWithVehicles = () =>
+  api.get("/admin/users-with-vehicles");

@@ -1,9 +1,34 @@
 import { useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { useVehicles } from "./hooks/useVehicles";
 import { useVehicleLogs } from "./hooks/useVehicleLogs";
 import LoginPage from "./pages/LoginPage";
 import AddVehicleModal from "./components/AddVehicleModal";
+import AdminDashboard from "./components/AdminDashboard";
+
+const vehicleIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64">
+      <defs>
+        <radialGradient id="pinGrad" cx="50%" cy="40%" r="80%">
+          <stop offset="0%" stop-color="#f87171" />
+          <stop offset="100%" stop-color="#b91c1c" />
+        </radialGradient>
+      </defs>
+      <path fill="url(#pinGrad)" d="M24 4c-8.8 0-16 7.2-16 16 0 9.8 8 18.1 12 25.9 2.6 4.5 6.1 11.1 7.6 15.2.4 1 1.5 1.7 2.6 1.7s2.2-.7 2.6-1.7c1.5-4.1 5-10.7 7.6-15.2C32 38.1 40 29.8 40 20c0-8.8-7.2-16-16-16z" />
+      <circle cx="24" cy="20" r="9" fill="#fff" opacity="0.96" />
+      <circle cx="24" cy="20" r="5.2" fill="#ef4444" />
+      <circle cx="24" cy="20" r="2.3" fill="#ffffff" />
+    </svg>
+  `),
+  iconSize: [40, 56],
+  iconAnchor: [20, 56],
+  popupAnchor: [0, -60],
+  className: '',
+});
 
 const C = {
   primary: "#2563eb", primaryLight: "#eff6ff", bg: "#f0f4f8",
@@ -256,6 +281,38 @@ function TrackingPage({ vehicles }) {
               ))}
             </div>
 
+                  <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "18px 20px", marginBottom: 16 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: C.text, marginBottom: 14 }}>Live Map</div>
+              {latestGPS ? (
+                <div style={{ height: 340, borderRadius: 12, overflow: 'hidden' }}>
+                  <MapContainer
+                    center={[latestGPS.latitude, latestGPS.longitude]}
+                    zoom={13}
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    <Marker
+                      position={[latestGPS.latitude, latestGPS.longitude]}
+                      icon={vehicleIcon}
+                    >
+                      <Popup>
+                        <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                          <strong>Current position</strong><br />
+                          {latestGPS.latitude.toFixed(5)}, {latestGPS.longitude.toFixed(5)}<br />
+                          {latestGPS.speed} km/h
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
+                </div>
+              ) : (
+                <div style={{ color: C.textMuted, fontSize: 13, textAlign: "center", padding: "40px 0" }}>No live GPS location available yet.</div>
+              )}
+            </div>
+
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "18px 20px" }}>
               <div style={{ fontWeight: 600, fontSize: 14, color: C.text, marginBottom: 14 }}>Recent GPS Logs</div>
               {gpsLogs.length === 0 ? (
@@ -395,11 +452,48 @@ function InnerApp() {
   const { user, loading: authLoading, logout } = useAuth();
   const [activePage, setActivePage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
-  const { vehicles, loading: vehiclesLoading, error, createVehicle, removeVehicle } = useVehicles(!!user);
+  const { vehicles, loading: vehiclesLoading, error, createVehicle, removeVehicle } = useVehicles(!!user && user.role !== "admin");
+
+  const handleLogin = (user) => {
+    if (!user) return;
+    const landingPage = user.role === "admin"
+      ? "admin"
+      : user.role === "driver"
+        ? "tracking"
+        : "dashboard";
+    setActivePage(landingPage);
+  };
 
   if (authLoading) return <Loader />;
-  if (!user) return <LoginPage onLogin={() => {}} />;
+  if (!user) return <LoginPage onLogin={handleLogin} />;
 
+  // Admin dashboard view
+  if (user.role === "admin") {
+    return (
+      <div style={{ display: "flex", width: "100%", height: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        <Sidebar active={activePage} setActive={setActivePage} collapsed={collapsed} user={user} onLogout={logout} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button onClick={() => setCollapsed(c => !c)} style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, display: "flex", padding: 4 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+              </button>
+              <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>Admin Dashboard</h1>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.success }} />
+              <span style={{ fontSize: 12, color: C.textMuted }}>Live · Admin Access</span>
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+            <AdminDashboard />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular user dashboard views
   const pageTitles = { dashboard: "Dashboard", vehicles: "Vehicles", tracking: "Live Tracking", trips: "Trip History", logs: "Engine Logs" };
 
   const renderPage = () => {
@@ -416,7 +510,7 @@ function InnerApp() {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+    <div style={{ display: "flex", width: "100%", height: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       <Sidebar active={activePage} setActive={setActivePage} collapsed={collapsed} user={user} onLogout={logout} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>

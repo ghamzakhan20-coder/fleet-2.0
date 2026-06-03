@@ -8,7 +8,7 @@ const C = {
 
 export default function LoginPage({ onLogin }) {
   const { login } = useAuth();
-  const [form, setForm]     = useState({ email: "", password: "" });
+  const [form, setForm]     = useState({ email: "", password: "", role: "driver" });
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState("");
 
@@ -17,24 +17,33 @@ export default function LoginPage({ onLogin }) {
     setError("");
     setLoading(true);
     try {
-      const user = await login(form.email, form.password);
+      const user = await login(form.email, form.password, form.role);
       onLogin(user);
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Check credentials.");
+      setError(err.response?.data?.message || err.message || "Login failed. Check credentials.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
+    // <div style={{ 
+    //   minHeight: "100vh", 
+    //   background: C.bg, 
+    //   display: "flex", 
+    //   alignItems: "center", 
+    //   justifyContent: "center",
+    //   padding: "16px",
+    // }}>
     <div style={{ 
-      minHeight: "100vh", 
-      background: C.bg, 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "center",
-      padding: "16px",
-    }}>
+  height: "100vh",      /* minHeight → height */
+  width: "100%",        /* yeh add karo */
+  background: C.bg, 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: "center",
+  padding: "16px",
+}}>
       <style>{`
         @media (max-width: 480px) {
           .login-container {
@@ -102,6 +111,30 @@ export default function LoginPage({ onLogin }) {
                 backgroundColor: "#ffffff"
               }}
             />
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: C.text, display: "block", marginBottom: 6 }}>Role</label>
+            <select
+              required
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                border: `1px solid ${C.border}`,
+                borderRadius: 8,
+                fontSize: 14,
+                color: C.text,
+                outline: "none",
+                boxSizing: "border-box",
+                backgroundColor: "#ffffff"
+              }}
+            >
+              <option value="owner">Owner</option>
+              <option value="admin">Admin</option>
+              <option value="driver">User</option>
+            </select>
           </div>
 
           <div style={{ marginBottom: 24 }}>
