@@ -16,10 +16,18 @@ connectDB();
 const app = express();
 
 // Enable CORS for the frontend during local development
+// const allowedOrigins = [
+//   process.env.FRONTEND_URL || 'http://localhost:3000',
+//   'http://localhost:30001 ',
+// ];
+
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
-  'http://localhost:30001 ',
+  'http://localhost:30001',
+  'https://fleet-2-0-xc5b.vercel.app',
+  'https://fleet-2-0-xc5b-bb9avg40f-ghulam-hamza-khans-projects.vercel.app'
 ];
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
