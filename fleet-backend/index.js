@@ -21,14 +21,23 @@ const app = express();
 //   'http://localhost:30001 ',
 // ];
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
+const defaultFrontendOrigins = [
+  'http://localhost:3000',
   'http://localhost:30001',
+  'https://fleet-2-0.vercel.app',
   'https://fleet-2-0-xc5b.vercel.app',
   'https://fleet-2-0-xc5b-bb9avg40f-ghulam-hamza-khans-projects.vercel.app'
 ];
 
-// If using a different deployed frontend origin, set FRONTEND_URL in the backend environment.
+const envOrigins = process.env.FRONTEND_URLS
+  ? process.env.FRONTEND_URLS.split(',').map((url) => url.trim()).filter(Boolean)
+  : [];
+
+const allowedOrigins = [
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ...envOrigins,
+  ...defaultFrontendOrigins,
+];
 
 app.use(cors({
   origin: (origin, callback) => {
