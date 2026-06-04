@@ -28,6 +28,8 @@ const allowedOrigins = [
   'https://fleet-2-0-xc5b-bb9avg40f-ghulam-hamza-khans-projects.vercel.app'
 ];
 
+// If using a different deployed frontend origin, set FRONTEND_URL in the backend environment.
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
