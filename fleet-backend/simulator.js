@@ -1,45 +1,88 @@
 // Vehicle Data Simulator
-// Simulates ESP32 sending data every 5 seconds
+// Smooth Route Simulation
 // Run: node simulator.js
 
-const deviceId = "ESP32-001"; // Change this to match your vehicle's deviceId
+const deviceId = "ESP32-001";
 const API_URL = "http://localhost:5000/api/vehicle-data";
 
-// Karachi coordinates base (your city!)
-const BASE_LAT = 24.8607;
-const BASE_LNG = 67.0011;
+// Main Route
+const ROUTE = [
+  { lat: 24.964724, lng: 67.053618 },
+  { lat: 24.964458, lng: 67.053713 },
+  { lat: 24.964188, lng: 67.053717 },
+  { lat: 24.963903, lng: 67.053743 },
+  { lat: 24.963658, lng: 67.053771 },
+  { lat: 24.963286, lng: 67.053817 },
+  { lat: 24.962812, lng: 67.053833 },
+  { lat: 24.962612, lng: 67.053665 }
+];
 
-let engineOn = true;
+// Generate smooth path
+function generateSmoothRoute(route, stepsPerSegment = 20) {
+  const smoothRoute = [];
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const start = route[i];
+    const end = route[i + 1];
+
+    for (let step = 0; step < stepsPerSegment; step++) {
+      const t = step / stepsPerSegment;
+
+      smoothRoute.push({
+        lat: start.lat + (end.lat - start.lat) * t,
+        lng: start.lng + (end.lng - start.lng) * t,
+      });
+    }
+  }
+
+  smoothRoute.push(route[route.length - 1]);
+
+  return smoothRoute;
+}
+
+const SMOOTH_ROUTE = generateSmoothRoute(ROUTE, 20);
+
+let currentIndex = 0;
 
 function randomBetween(min, max) {
-  return parseFloat((Math.random() * (max - min) + min).toFixed(4));
+  return Number((Math.random() * (max - min) + min).toFixed(2));
+}
+
+function getNextLocation() {
+  const point = SMOOTH_ROUTE[currentIndex];
+
+  currentIndex++;
+
+  // Loop forever
+  if (currentIndex >= SMOOTH_ROUTE.length) {
+    currentIndex = 0;
+  }
+
+  return point;
 }
 
 function generateData() {
-  // Toggle engine status randomly every ~30 seconds
-  if (Math.random() < 0.05) engineOn = !engineOn;
-
-  const engineStatus = engineOn ? "ON" : "OFF";
+  const location = getNextLocation();
 
   return {
     deviceId,
 
-    // GPS — small random drift around Karachi
-    latitude:  BASE_LAT + randomBetween(-0.05, 0.05),
-    longitude: BASE_LNG + randomBetween(-0.05, 0.05),
-    speed:     engineOn ? randomBetween(0, 120) : 0,
-    altitude:  randomBetween(5, 20),
-    heading:   randomBetween(0, 360),
-    satellites: Math.floor(randomBetween(5, 12)),
+    latitude: location.lat,
+    longitude: location.lng,
 
-    // Engine / OBD
-    engineStatus,
-    rpm:            engineOn ? randomBetween(700, 4000) : 0,
-    engineTemp:     engineOn ? randomBetween(75, 105)   : randomBetween(20, 40),
-    fuelLevel:      randomBetween(10, 100),
-    batteryVoltage: randomBetween(11.5, 14.5),
-    obdSpeed:       engineOn ? randomBetween(0, 120)    : 0,
-    dtcCodes:       Math.random() < 0.1 ? ["P0301"] : [], // 10% chance of fault code
+    speed: randomBetween(25, 45),
+    altitude: randomBetween(5, 15),
+    heading: randomBetween(0, 360),
+    satellites: Math.floor(randomBetween(8, 12)),
+
+    engineStatus: "ON",
+    rpm: randomBetween(1500, 2800),
+    engineTemp: randomBetween(82, 92),
+    fuelLevel: randomBetween(55, 85),
+    batteryVoltage: randomBetween(12.4, 14.0),
+    obdSpeed: randomBetween(25, 45),
+
+    dtcCodes: [],
   };
 }
 
@@ -49,28 +92,32 @@ async function sendData() {
   try {
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
-
-    console.log(`[${new Date().toLocaleTimeString()}] ✅ Sent | Engine: ${payload.engineStatus} | Speed: ${payload.speed} km/h | GPS: (${payload.latitude}, ${payload.longitude})`);
+    console.log(
+      `[${new Date().toLocaleTimeString()}] 📍 ${payload.latitude.toFixed(
+        6
+      )}, ${payload.longitude.toFixed(6)} | ${payload.speed} km/h`
+    );
 
     if (!response.ok) {
-      console.error("  ❌ Server error:", data.message);
+      console.error("❌ Server Error");
     }
   } catch (err) {
-    console.error(`[${new Date().toLocaleTimeString()}] ❌ Failed to reach server:`, err.message);
-    console.error("  Make sure your backend is running on", API_URL);
+    console.error("❌ Failed:", err.message);
   }
 }
 
-console.log("🚗 Vehicle Simulator Started");
-console.log(`📡 Sending data to: ${API_URL}`);
-console.log(`🔑 Device ID: ${deviceId}`);
-console.log("⏱  Interval: every 5 seconds\n");
+console.log("🚗 Smooth Route Simulator Started");
+console.log(`📡 ${API_URL}`);
+console.log(`🛣 Route Points: ${SMOOTH_ROUTE.length}`);
+console.log("🔄 Infinite Loop Enabled");
 
-// Send immediately then every 5 seconds
 sendData();
-setInterval(sendData, 5000);
+
+// 2 sec interval = smooth tracking
+setInterval(sendData, 2000);

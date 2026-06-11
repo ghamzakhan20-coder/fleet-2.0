@@ -2,7 +2,9 @@ const Vehicle = require('../models/Vehicle');
 const GPSLog = require('../models/GPSLog');
 const EngineLog = require('../models/EngineLog');
 const Trip = require('../models/Trip');
+const Notification = require('../models/Notification');
 const { successResponse, errorResponse } = require('../utils/responseHelper');
+
 
 // Helper: calculate distance between two GPS coords (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -62,6 +64,7 @@ const receiveVehicleData = async (req, res, next) => {
         latitude,
         longitude,
         speed: speed || 0,
+        engineStatus: engineStatus || 'OFF',
         altitude: altitude || 0,
         heading: heading || 0,
         satellites: satellites || 0,
@@ -85,6 +88,74 @@ const receiveVehicleData = async (req, res, next) => {
         timestamp: now,
       });
     }
+
+    // ─── Vehicle Alerts (Owner App Notifications) ─────────────────────────
+    const SPEED_THRESHOLD_KMH = 80;
+    const LOW_FUEL_THRESHOLD_PERCENT = 20;
+    const ENGINE_OVERHEAT_TEMP_C = 95;
+    const ALERT_DEDUPE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
+    const speedValue = typeof speed === 'number' ? speed : Number(speed ?? 0);
+    const fuelValue = typeof fuelLevel === 'number' ? fuelLevel : Number(fuelLevel ?? 0);
+    const engineTempValue =
+      typeof engineTemp === 'number' ? engineTemp : Number(engineTemp ?? 0);
+
+    const ownerId = vehicle.ownerId;
+
+    const maybeCreateAlert = async ({ type, title, message, dedupeKey }) => {
+      // Throttle duplicates by checking latest notification within window
+      const recent = await Notification.findOne({
+        ownerId,
+        vehicleId: vehicle._id,
+        type,
+        dedupeKey,
+      })
+        .sort({ createdAt: -1 })
+        .exec();
+
+      if (recent) {
+        const age = now.getTime() - recent.createdAt.getTime();
+        if (age < ALERT_DEDUPE_WINDOW_MS) return;
+      }
+
+      await Notification.create({
+        ownerId,
+        vehicleId: vehicle._id,
+        type,
+        title,
+        message,
+        dedupeKey,
+      });
+    };
+
+    if (speedValue > SPEED_THRESHOLD_KMH) {
+      await maybeCreateAlert({
+        type: 'overspeed',
+        title: 'Overspeed Alert',
+        message: `Vehicle ${vehicle.numberPlate} speed crossed ${SPEED_THRESHOLD_KMH} km/h (Current: ${speedValue} km/h).`,
+        dedupeKey: `speed:${SPEED_THRESHOLD_KMH}`,
+      });
+    }
+
+
+    if (fuelValue > 0 && fuelValue < LOW_FUEL_THRESHOLD_PERCENT) {
+      await maybeCreateAlert({
+        type: 'low_fuel',
+        title: 'Low Fuel Alert',
+        message: `Vehicle ${vehicle.numberPlate} fuel is low (${fuelValue}% remaining). Threshold: ${LOW_FUEL_THRESHOLD_PERCENT}%.`,
+        dedupeKey: `fuel:${LOW_FUEL_THRESHOLD_PERCENT}`,
+      });
+    }
+
+    if (engineTempValue > 0 && engineTempValue > ENGINE_OVERHEAT_TEMP_C) {
+      await maybeCreateAlert({
+        type: 'engine_overheat',
+        title: 'Engine Overheat Alert',
+        message: `Vehicle ${vehicle.numberPlate} engine temperature high (${engineTempValue}°C). Threshold: ${ENGINE_OVERHEAT_TEMP_C}°C.`,
+        dedupeKey: `temp:${ENGINE_OVERHEAT_TEMP_C}`,
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     // ─── Auto Trip Detection ───────────────────────────────────────────────
     let activeTrip = await Trip.findOne({ vehicleId: vehicle._id, status: 'ongoing' });
@@ -115,12 +186,12 @@ const receiveVehicleData = async (req, res, next) => {
         endLocation: { latitude, longitude },
         status: 'completed',
         distanceKm: parseFloat(distanceKm.toFixed(2)),
-        maxSpeed: speed || 0,
+        maxSpeed: speedValue || 0,
       });
     } else if (activeTrip && speed !== undefined) {
       // Update max speed during ongoing trip
-      if (speed > (activeTrip.maxSpeed || 0)) {
-        await Trip.findByIdAndUpdate(activeTrip._id, { maxSpeed: speed });
+      if (speedValue > (activeTrip.maxSpeed || 0)) {
+        await Trip.findByIdAndUpdate(activeTrip._id, { maxSpeed: speedValue });
       }
     }
     // ────────────────────────────────────────────────────────────────────────
@@ -130,6 +201,7 @@ const receiveVehicleData = async (req, res, next) => {
       gpsLog,
       engineLog,
     });
+
   } catch (error) {
     next(error);
   }

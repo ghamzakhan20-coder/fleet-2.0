@@ -48,3 +48,12 @@ export const sendSimulatedData = (data) =>
 
 export const getUsersWithVehicles = () =>
   api.get("/admin/users-with-vehicles");
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────
+
+export const getMyNotifications = (limit = 50) =>
+  api.get(`/notifications?limit=${limit}`);
+
+export const markNotificationAsRead = (id) =>
+  api.patch(`/notifications/${id}/read`);
+

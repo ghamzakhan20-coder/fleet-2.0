@@ -6,7 +6,7 @@ const { successResponse, errorResponse } = require('../utils/responseHelper');
 // @access  Admin, Owner
 const addVehicle = async (req, res, next) => {
   try {
-    const { deviceId, model, numberPlate, ownerId, driverId } = req.body;
+    const { deviceId, model, numberPlate, ownerId, driverId, type } = req.body;
 
     // If owner is adding, force ownerId to be themselves
     const resolvedOwnerId =
@@ -18,6 +18,7 @@ const addVehicle = async (req, res, next) => {
       numberPlate,
       ownerId: resolvedOwnerId,
       driverId: driverId || null,
+      type: type || 'live'  
     });
 
     successResponse(res, 201, 'Vehicle added successfully.', vehicle);

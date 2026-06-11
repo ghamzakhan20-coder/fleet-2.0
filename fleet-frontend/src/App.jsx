@@ -5,9 +5,11 @@ import L from 'leaflet';
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { useVehicles } from "./hooks/useVehicles";
 import { useVehicleLogs } from "./hooks/useVehicleLogs";
+import { useNotifications } from "./hooks/useNotifications";
 import LoginPage from "./pages/LoginPage";
 import AddVehicleModal from "./components/AddVehicleModal";
 import AdminDashboard from "./components/AdminDashboard";
+
 
 const vehicleIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
@@ -79,14 +81,16 @@ function ErrorBox({ msg }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ active, setActive, collapsed, user, onLogout }) {
+function Sidebar({ active, setActive, collapsed, user, onLogout, notificationsUnread = 0 }) {
   const items = [
     { id: "dashboard", label: "Dashboard",     path: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
     { id: "vehicles", label: "Vehicles",       path: "M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10h10zM13 8h4l3 5v3h-7V8z" },
     { id: "tracking", label: "Live Tracking",  path: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" },
     { id: "trips",    label: "Trip History",   path: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
     { id: "logs",     label: "Engine Logs",    path: "M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18" },
+    { id: "notifications", label: "Notifications", path: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1" },
   ];
+
 
   const initials = user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "U";
 
@@ -104,13 +108,17 @@ function Sidebar({ active, setActive, collapsed, user, onLogout }) {
       <nav style={{ flex: 1, padding: "12px 8px" }}>
         {items.map(item => {
           const isActive = active === item.id;
+          const showUnread = item.id === "notifications" && !collapsed && notificationsUnread > 0;
           return (
             <button key={item.id} onClick={() => setActive(item.id)}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: collapsed ? "10px 16px" : "10px 14px", borderRadius: 8, border: "none", background: isActive ? "rgba(37,99,235,0.2)" : "transparent", cursor: "pointer", marginBottom: 2, justifyContent: collapsed ? "center" : "flex-start" }}>
+
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isActive ? "#60a5fa" : "#94a3b8"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d={item.path} />
               </svg>
               {!collapsed && <span style={{ color: isActive ? "#60a5fa" : "#94a3b8", fontSize: 13.5, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>}
+              {showUnread && <span style={{ marginLeft: "auto", background: C.danger, color: "white", fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 999 }}>{notificationsUnread > 99 ? '99+' : notificationsUnread}</span>}
+
             </button>
           );
         })}
@@ -453,6 +461,8 @@ function InnerApp() {
   const [activePage, setActivePage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const { vehicles, loading: vehiclesLoading, error, createVehicle, removeVehicle } = useVehicles(!!user && user.role !== "admin");
+  const { notifications, unreadCount, loading: notificationsLoading, error: notificationsError, readOne } = useNotifications(5000);
+
 
   const handleLogin = (user) => {
     if (!user) return;
@@ -494,26 +504,86 @@ function InnerApp() {
   }
 
   // Regular user dashboard views
-  const pageTitles = { dashboard: "Dashboard", vehicles: "Vehicles", tracking: "Live Tracking", trips: "Trip History", logs: "Engine Logs" };
+  const pageTitles = { dashboard: "Dashboard", vehicles: "Vehicles", tracking: "Live Tracking", trips: "Trip History", logs: "Engine Logs", notifications: "Notifications" };
+
+
+  const NotificationsPage = () => {
+    if (notificationsLoading) return <Loader />;
+    if (notificationsError) return <ErrorBox msg={notificationsError} />;
+
+    return (
+      <div>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: C.text }}>My Alerts & Notifications</div>
+          <div style={{ fontSize: 12, color: C.textMuted }}>{unreadCount} unread</div>
+        </div>
+
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+          {notifications.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: C.textMuted, fontSize: 13 }}>
+              No notifications yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {notifications.map((n) => (
+                <div key={n._id} style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, background: n.isRead ? 'transparent' : C.primaryLight }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+                        {n.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>{n.message}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>
+                        {new Date(n.createdAt).toLocaleString()} 
+                        {!n.isRead ? <span style={{ color: C.primary, fontWeight: 700 }}>• New</span> : null}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: n.type === 'overspeed' || n.type === 'engine_overheat' ? C.dangerLight : C.warningLight, color: n.type === 'overspeed' || n.type === 'engine_overheat' ? C.danger : C.warning, whiteSpace: 'nowrap' }}>
+                        {n.type === 'overspeed' ? 'Overspeed' : n.type === 'low_fuel' ? 'Low Fuel' : 'Engine Overheat'}
+                      </span>
+                      {!n.isRead && (
+                        <button
+                          onClick={() => readOne(n._id)}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontSize: 12, color: C.textMuted, fontWeight: 600 }}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderPage = () => {
     if (vehiclesLoading) return <Loader />;
     if (error) return <ErrorBox msg={error} />;
     switch (activePage) {
+
       case "dashboard": return <DashboardPage vehicles={vehicles} />;
       case "vehicles":  return <VehiclesPage vehicles={vehicles} loading={vehiclesLoading} error={error} onAdd={createVehicle} onDelete={removeVehicle} userRole={user.role} />;
       case "tracking":  return <TrackingPage vehicles={vehicles} />;
       case "trips":     return <TripsPage vehicles={vehicles} />;
       case "logs":      return <LogsPage vehicles={vehicles} />;
+      case "notifications": return <NotificationsPage />;
       default:          return <DashboardPage vehicles={vehicles} />;
+
     }
   };
 
   return (
-    <div style={{ display: "flex", width: "100%", height: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      <Sidebar active={activePage} setActive={setActivePage} collapsed={collapsed} user={user} onLogout={logout} />
+      <div style={{ display: "flex", width: "100%", height: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+      <Sidebar active={activePage} setActive={setActivePage} collapsed={collapsed} user={user} onLogout={logout} notificationsUnread={unreadCount} />
+
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <button onClick={() => setCollapsed(c => !c)} style={{ background: "none", border: "none", cursor: "pointer", color: C.textMuted, display: "flex", padding: 4 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>

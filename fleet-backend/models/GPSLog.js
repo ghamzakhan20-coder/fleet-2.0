@@ -23,6 +23,11 @@ const gpsLogSchema = new mongoose.Schema(
       type: Number,         // km/h
       default: 0,
     },
+    engineStatus: {
+      type: String,
+      enum: ['ON', 'OFF', 'IDLE'],
+      default: 'OFF',
+    },
     altitude: {
       type: Number,         // meters
       default: 0,

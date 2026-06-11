@@ -34,6 +34,11 @@ const vehicleSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    type: {
+      type: String,
+      enum: ['demo', 'live'],
+      default: 'live',
+    },
   },
   { timestamps: true }
 );

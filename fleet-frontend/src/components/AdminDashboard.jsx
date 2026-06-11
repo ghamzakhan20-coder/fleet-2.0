@@ -41,6 +41,9 @@ function StatusBadge({ status }) {
     driver: ["#dbeafe", "#1d4ed8", "Driver"],
     owner: ["#fef9c3", "#a16207", "Owner"],
     admin: ["#e0e7ff", "#4f46e5", "Admin"],
+    ON: ["#dcfce7", "#15803d", "ON"],
+    OFF: ["#fee2e2", "#b91c1c", "OFF"],
+    IDLE: ["#fef9c3", "#a16207", "IDLE"],
   };
   const [bg, color, label] = m[status] || ["#f0f4f8", "#64748b", "Unknown"];
   return (
@@ -216,6 +219,7 @@ function VehicleDetailsModal({ vehicle, onClose }) {
                       <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Latitude</th>
                       <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Longitude</th>
                       <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Speed</th>
+                      <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Engine</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -225,6 +229,7 @@ function VehicleDetailsModal({ vehicle, onClose }) {
                         <td style={{ padding: '6px 0', color: C.text }}>{log.latitude.toFixed(5)}</td>
                         <td style={{ padding: '6px 0', color: C.text }}>{log.longitude.toFixed(5)}</td>
                         <td style={{ padding: '6px 0', color: C.text, fontWeight: 600 }}>{log.speed} km/h</td>
+                        <td style={{ padding: '6px 0' }}><StatusBadge status={log.engineStatus || 'OFF'} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -247,6 +252,7 @@ function VehicleDetailsModal({ vehicle, onClose }) {
                       <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Temp</th>
                       <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Fuel</th>
                       <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>Battery</th>
+                      <th style={{ textAlign: 'left', padding: '6px 0', fontWeight: 600, color: C.textMuted }}>DTC Codes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,6 +264,7 @@ function VehicleDetailsModal({ vehicle, onClose }) {
                         <td style={{ padding: '6px 0', color: log.engineTemp > 100 ? C.danger : C.text }}>{log.engineTemp.toFixed(1)}°</td>
                         <td style={{ padding: '6px 0', color: log.fuelLevel < 30 ? C.danger : C.text }}>{log.fuelLevel.toFixed(0)}%</td>
                         <td style={{ padding: '6px 0', color: C.text }}>{log.batteryVoltage.toFixed(1)}V</td>
+                        <td style={{ padding: '6px 0', color: log.dtcCodes?.length ? C.danger : C.textMuted }}>{log.dtcCodes?.length ? log.dtcCodes.join(', ') : 'None'}</td>
                       </tr>
                     ))}
                   </tbody>

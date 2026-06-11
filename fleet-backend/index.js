@@ -9,11 +9,13 @@ const authRoutes = require('./routes/authRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const logRoutes = require('./routes/logRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Connect to MongoDB
 connectDB();
 
 const app = express();
+
 
 // Enable CORS for the frontend during local development
 // const allowedOrigins = [
@@ -58,9 +60,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ESP32 data endpoint (also mounted at root level for convenience)
 app.use('/api', logRoutes);
+
 
 // Health check
 app.get('/', (req, res) => {
