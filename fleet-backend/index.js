@@ -42,13 +42,15 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS policy: origin not allowed'));
-    }
-  },
+  
+  // origin: (origin, callback) => {
+  //   if (!origin || allowedOrigins.includes(origin)) {
+  //     callback(null, true);
+  //   } else {
+  //     callback(new Error('CORS policy: origin not allowed'));
+  //   }
+  // },
+  origin: true,
   credentials: true,
 }));
 
