@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { getUsersWithVehicles, getGPSLogs, getEngineLogs, registerUser } from '../api/services';
+import { getUsersWithVehicles, getGPSLogs, getEngineLogs, registerUser, deleteUser } from '../api/services';
 
 const vehicleIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
@@ -378,6 +378,7 @@ export default function AdminDashboard() {
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState(null);
 
   const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -428,6 +429,22 @@ export default function AdminDashboard() {
       setError(err.response?.data?.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    const confirmMessage = `Remove owner ${userName}? This cannot be undone.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setDeletingUserId(userId);
+      setError('');
+      await deleteUser(userId);
+      await fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove owner.');
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -524,13 +541,16 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {filteredUsers.map(user => (
-                <tr key={user._id} onClick={() => { setSelectedUser(user); setView('vehicles'); }} style={{
-                  borderBottom: `1px solid ${C.border}`,
-                  cursor: 'pointer',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.target.style.background = C.primaryLight}
-                onMouseLeave={(e) => e.target.style.background = 'transparent'}>
+                <tr key={user._id}
+                  onClick={() => { setSelectedUser(user); setView('vehicles'); }}
+                  style={{
+                    borderBottom: `1px solid ${C.border}`,
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = C.primaryLight}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
                   <td style={{ padding: '12px 16px', fontSize: 13, color: C.text, fontWeight: 500 }}>{user.name}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: C.textMuted }}>{user.email}</td>
                   <td style={{ padding: '12px 16px' }}><StatusBadge status={user.role} /></td>
@@ -539,6 +559,29 @@ export default function AdminDashboard() {
                   </td>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: C.primary }}>
                     {(user.vehiclesOwned?.length || 0) + (user.vehiclesAssigned?.length || 0)} vehicle(s)
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>
+                    {user.role === 'owner' ? (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteUser(user._id, user.name); }}
+                        disabled={deletingUserId === user._id}
+                        style={{
+                          padding: '8px 12px',
+                          background: C.danger,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 8,
+                          cursor: deletingUserId === user._id ? 'not-allowed' : 'pointer',
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {deletingUserId === user._id ? 'Removing...' : 'Remove'}
+                      </button>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                 </tr>
               ))}

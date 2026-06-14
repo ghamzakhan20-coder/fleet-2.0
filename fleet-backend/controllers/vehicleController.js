@@ -86,6 +86,30 @@ const getVehicleById = async (req, res, next) => {
   }
 };
 
+// @desc    Get single vehicle by number plate
+// @route   GET /api/vehicles/plate/:plate
+// @access  Public
+const getVehicleByPlate = async (req, res, next) => {
+  try {
+    const plate = req.params.plate?.trim().toUpperCase();
+    if (!plate) {
+      return errorResponse(res, 400, 'Vehicle plate is required.');
+    }
+
+    const vehicle = await Vehicle.findOne({ numberPlate: plate })
+      .populate('ownerId', 'name email phone')
+      .populate('driverId', 'name email phone');
+
+    if (!vehicle) {
+      return errorResponse(res, 404, 'Vehicle not found.');
+    }
+
+    successResponse(res, 200, 'Vehicle fetched.', vehicle);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Update vehicle
 // @route   PUT /api/vehicles/:id
 // @access  Admin, Owner
@@ -147,6 +171,7 @@ module.exports = {
   addVehicle,
   getVehicles,
   getVehicleById,
+  getVehicleByPlate,
   updateVehicle,
   deleteVehicle,
 };

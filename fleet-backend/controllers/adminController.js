@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
-const { successResponse } = require('../utils/responseHelper');
+const { successResponse, errorResponse } = require('../utils/responseHelper');
 
 // @desc    Get all users with their associated vehicles
 // @route   GET /api/admin/users-with-vehicles
@@ -49,4 +49,31 @@ const getUsersWithVehicles = async (req, res, next) => {
   }
 };
 
-module.exports = { getUsersWithVehicles };
+// @desc    Delete owner user
+// @route   DELETE /api/admin/users/:id
+// @access  Admin
+const deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return errorResponse(res, 404, 'User not found.');
+    }
+
+    if (user.role !== 'owner') {
+      return errorResponse(res, 400, 'Only owner users can be removed from this dashboard.');
+    }
+
+    const vehicleCount = await Vehicle.countDocuments({ ownerId: user._id });
+    if (vehicleCount > 0) {
+      return errorResponse(res, 400, 'Owner cannot be removed while they still have assigned vehicles. Reassign or remove their vehicles first.');
+    }
+
+    await user.deleteOne();
+    successResponse(res, 200, 'Owner removed successfully.');
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getUsersWithVehicles, deleteUser };

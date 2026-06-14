@@ -283,6 +283,66 @@ const getEngineLogs = async (req, res, next) => {
   }
 };
 
+// @desc    Get public GPS logs by plate
+// @route   GET /api/logs/public/gps/:plate
+// @access  Public
+const getPublicGPSLogs = async (req, res, next) => {
+  try {
+    const plate = req.params.plate?.trim().toUpperCase();
+    const { limit = 100, page = 1 } = req.query;
+
+    const vehicle = await Vehicle.findOne({ numberPlate: plate, isActive: true });
+    if (!vehicle) return errorResponse(res, 404, 'Vehicle not found.');
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const logs = await GPSLog.find({ vehicleId: vehicle._id })
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await GPSLog.countDocuments({ vehicleId: vehicle._id });
+
+    successResponse(res, 200, 'Vehicle GPS logs fetched.', {
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+      logs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get public engine logs by plate
+// @route   GET /api/logs/public/engine/:plate
+// @access  Public
+const getPublicEngineLogs = async (req, res, next) => {
+  try {
+    const plate = req.params.plate?.trim().toUpperCase();
+    const { limit = 100, page = 1 } = req.query;
+
+    const vehicle = await Vehicle.findOne({ numberPlate: plate, isActive: true });
+    if (!vehicle) return errorResponse(res, 404, 'Vehicle not found.');
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const logs = await EngineLog.find({ vehicleId: vehicle._id })
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await EngineLog.countDocuments({ vehicleId: vehicle._id });
+
+    successResponse(res, 200, 'Vehicle engine logs fetched.', {
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+      logs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get trip history by vehicleId
 // @route   GET /api/logs/trips/:vehicleId
 // @access  Private
@@ -314,5 +374,7 @@ module.exports = {
   receiveVehicleData,
   getGPSLogs,
   getEngineLogs,
+  getPublicGPSLogs,
+  getPublicEngineLogs,
   getTripsByVehicle,
 };

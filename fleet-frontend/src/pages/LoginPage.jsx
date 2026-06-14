@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import DriverVehicleModal from "../components/DriverVehicleModal";
 
 const C = {
   primary: "#2563eb", bg: "#f0f4f8", border: "#e2e8f0",
@@ -8,9 +9,11 @@ const C = {
 
 export default function LoginPage({ onLogin }) {
   const { login } = useAuth();
-  const [form, setForm]     = useState({ email: "", password: "", role: "driver" });
+  const [form, setForm] = useState({ email: "", password: "", role: "owner" });
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [verifiedVehicle, setVerifiedVehicle] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,7 +121,12 @@ export default function LoginPage({ onLogin }) {
             <select
               required
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              onChange={(e) => {
+                const nextRole = e.target.value;
+                setForm({ ...form, role: nextRole });
+                setVerifiedVehicle(null);
+                setShowDriverModal(nextRole === "driver");
+              }}
               style={{
                 width: "100%",
                 padding: "10px 14px",
@@ -136,6 +144,20 @@ export default function LoginPage({ onLogin }) {
               <option value="driver">User</option>
             </select>
           </div>
+
+          {verifiedVehicle && (
+            <div style={{
+              marginBottom: 16,
+              padding: 14,
+              borderRadius: 12,
+              background: "#f8fbff",
+              border: `1px solid ${C.border}`,
+            }}>
+              <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 6 }}>Verified vehicle</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{verifiedVehicle.model} · {verifiedVehicle.numberPlate}</div>
+              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{verifiedVehicle.driverId?.name ? `Driver: ${verifiedVehicle.driverId.name}` : "Driver not assigned"}</div>
+            </div>
+          )}
 
           <div style={{ marginBottom: 24 }}>
             <label style={{ fontSize: 13, fontWeight: 500, color: C.text, display: "block", marginBottom: 6 }}>Password</label>
@@ -178,6 +200,14 @@ export default function LoginPage({ onLogin }) {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        {showDriverModal && (
+          <DriverVehicleModal
+            initialPlate={form.numberPlate || ""}
+            onClose={() => setShowDriverModal(false)}
+            onVerified={(vehicle) => setVerifiedVehicle(vehicle)}
+          />
+        )}
 
         <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 20 }}>
           Roles: <strong>admin</strong> · <strong>owner</strong> · <strong>driver</strong>

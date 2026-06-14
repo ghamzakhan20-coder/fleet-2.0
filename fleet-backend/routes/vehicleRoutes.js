@@ -4,6 +4,7 @@ const {
   addVehicle,
   getVehicles,
   getVehicleById,
+  getVehicleByPlate,
   updateVehicle,
   deleteVehicle,
 } = require('../controllers/vehicleController');
@@ -13,6 +14,10 @@ router
   .route('/')
   .get(protect, getVehicles)
   .post(protect, authorize('admin', 'owner'), addVehicle);
+
+router
+  .route('/plate/:plate')
+  .get(getVehicleByPlate);
 
 router
   .route('/:id')

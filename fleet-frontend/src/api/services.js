@@ -19,6 +19,9 @@ export const getVehicles = () =>
 export const getVehicleById = (id) =>
   api.get(`/vehicles/${id}`);
 
+export const getVehicleByPlate = (plate) =>
+  api.get(`/vehicles/plate/${encodeURIComponent(plate)}`);
+
 export const addVehicle = (data) =>
   api.post("/vehicles", data);
 
@@ -36,6 +39,12 @@ export const getGPSLogs = (vehicleId, page = 1, limit = 50) =>
 export const getEngineLogs = (vehicleId, page = 1, limit = 50) =>
   api.get(`/logs/engine/${vehicleId}?page=${page}&limit=${limit}`);
 
+export const getPublicGPSLogs = (plate, page = 1, limit = 50) =>
+  api.get(`/logs/public/gps/${encodeURIComponent(plate)}?page=${page}&limit=${limit}`);
+
+export const getPublicEngineLogs = (plate, page = 1, limit = 50) =>
+  api.get(`/logs/public/engine/${encodeURIComponent(plate)}?page=${page}&limit=${limit}`);
+
 export const getTrips = (vehicleId) =>
   api.get(`/logs/trips/${vehicleId}`);
 
@@ -48,7 +57,8 @@ export const sendSimulatedData = (data) =>
 
 export const getUsersWithVehicles = () =>
   api.get("/admin/users-with-vehicles");
-
+export const deleteUser = (userId) =>
+  api.delete(`/admin/users/${encodeURIComponent(userId)}`);
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────
 
 export const getMyNotifications = (limit = 50) =>
