@@ -2,7 +2,7 @@
 // Smooth Route Simulation
 // Run: node simulator.js
 
-const deviceId = "ESP32-001";
+const deviceId = "ESP32";
 const API_URL = "http://localhost:5000/api/vehicle-data";
 
 // Main Route
